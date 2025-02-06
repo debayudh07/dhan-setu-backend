@@ -13,41 +13,48 @@ export class AuthService {
     private jwtService: JwtService
   ) {}
 
-  async signup(dto: SignupDto): Promise<{ token: string; message: string }> {
+  async signup(dto: SignupDto): Promise<{ token: string }> {
     const { email, password } = dto;
 
-    // Check if user already exists
     const existingUser = await this.userModel.findOne({ email });
     if (existingUser) {
       throw new UnauthorizedException('User already exists');
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new this.userModel({ email, password: hashedPassword });
     await user.save();
 
-    // Generate token
     const token = this.jwtService.sign({ id: user._id, email: user.email });
-
-    return { token, message: 'Signup successful' };
+    return { token };
   }
 
-  async login(dto: LoginDto): Promise<{ token: string; message: string }> {
+  async login(dto: LoginDto): Promise<{ token: string }> {
     const { email, password } = dto;
     
     const user = await this.userModel.findOne({ email });
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
+    if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (!isPasswordValid) throw new UnauthorizedException('Invalid credentials');
+
+    const token = this.jwtService.sign({ id: user._id, email: user.email });
+    return { token };
+  }
+
+  async validateGoogleUser(profile: any): Promise<{ token: string }> {
+    let user = await this.userModel.findOne({ googleId: profile.googleId });
+
+    if (!user) {
+      user = new this.userModel({
+        googleId: profile.googleId,
+        email: profile.email,
+        name: profile.name,
+      });
+      await user.save();
     }
 
     const token = this.jwtService.sign({ id: user._id, email: user.email });
-    
-    return { token, message: 'Login successful' };
+    return { token };
   }
 }
