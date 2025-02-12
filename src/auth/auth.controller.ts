@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Req, UseGuards, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignupDto, LoginDto } from './dto/auth.dto';
 import { AuthGuard } from '@nestjs/passport';
@@ -24,8 +24,11 @@ export class AuthController {
   }
 
   @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
-  async googleAuthRedirect(@Req() req) {
-    return this.authService.validateGoogleUser(req.user);
-  }
+@UseGuards(AuthGuard('google'))
+async googleAuthRedirect(@Req() req, @Res() res) {
+  const { token, redirectUrl } = await this.authService.validateGoogleUser(req.user);
+  res.cookie('token', token, { httpOnly: true, secure: true });
+  return res.redirect(`http://localhost:3000${redirectUrl}`);
+}
+
 }

@@ -42,19 +42,37 @@ export class AuthService {
     return { token };
   }
 
-  async validateGoogleUser(profile: any): Promise<{ token: string }> {
+  async validateGoogleUser(profile: any): Promise<{ token: string, redirectUrl: string }> {
+    // First try to find user by googleId
     let user = await this.userModel.findOne({ googleId: profile.googleId });
-
+    let isNewUser = false;
+  
+    // If no user found by googleId, try finding by email
     if (!user) {
-      user = new this.userModel({
-        googleId: profile.googleId,
-        email: profile.email,
-        name: profile.name,
-      });
-      await user.save();
+      user = await this.userModel.findOne({ email: profile.email });
+      
+      if (user) {
+        // Update existing user with Google info
+        user.googleId = profile.googleId;
+        await user.save();
+      } else {
+        // Create new user if neither googleId nor email exists
+        isNewUser = true;
+        user = new this.userModel({
+          googleId: profile.googleId,
+          email: profile.email,
+          name: profile.name,
+        });
+        await user.save();
+      }
     }
-
+  
+    // Generate token regardless of whether user is new or existing
     const token = this.jwtService.sign({ id: user._id, email: user.email });
-    return { token };
+    
+    // Redirect to appropriate route based on whether user is new or existing
+    const redirectUrl = isNewUser ? '/onboarding' : '/userdash';
+    
+    return { token, redirectUrl };
   }
 }
