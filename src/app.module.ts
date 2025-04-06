@@ -4,6 +4,8 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { TournamentModule } from './tournament/tournament.module';
+import { TournamentRegistrationModule } from './tournament-registration/tournament-registration.module';
 
 @Module({
   imports: [
@@ -12,6 +14,8 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
     AuthModule,
     ProfileModule,
     CloudinaryModule,
+    TournamentModule,
+    TournamentRegistrationModule,
   ],
 })
 export class AppModule implements OnModuleInit {
