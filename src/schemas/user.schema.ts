@@ -54,7 +54,7 @@ export class User {
   @Prop({ required: false })
   country: string;
 
-  @Prop({ required: false, enum: ['passport', 'dl', 'national'] })
+  @Prop({ required: false, enum: ['passport', 'dl', 'national'," "] })
   documentType: string;
 
   @Prop({ required: false })
