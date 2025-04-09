@@ -2,10 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import { v2 as cloudinary } from 'cloudinary';
 
-
-
-
-// Updated User Schema with Cloudinary URLs
+// Updated User Schema with Cloudinary URLs and Tokens
 export type UserDocument = User & Document;
 
 @Schema()
@@ -19,7 +16,7 @@ export class User {
   @Prop({ required: false })
   name: string;
 
-  @Prop({  required:false,unique: true })
+  @Prop({ required: false, unique: true })
   username: string;
 
   @Prop({ required: true })
@@ -72,6 +69,9 @@ export class User {
   @Prop({ required: false, default: false })
   identityVerified: boolean;
 
+  @Prop({ required: false, default: 0 })
+  tokens: number;
+
   @Prop({ required: false, default: Date.now })
   createdAt: Date;
 
@@ -114,4 +114,3 @@ UserSchema.pre('findOneAndDelete', async function(next) {
   
   next();
 });
-
