@@ -54,6 +54,14 @@ export class AuthService {
       if (user) {
         // Update existing user with Google info
         user.googleId = profile.googleId;
+        // Update name if not already set
+        if (!user.name && profile.name) {
+          user.name = profile.name;
+        }
+        // Update profile picture from Google if available
+        if (profile.profilePicture && (!user.profilePicture || user.googleId)) {
+          user.profilePicture = profile.profilePicture;
+        }
         await user.save();
       } else {
         // Create new user if neither googleId nor email exists
@@ -62,7 +70,14 @@ export class AuthService {
           googleId: profile.googleId,
           email: profile.email,
           name: profile.name,
+          profilePicture: profile.profilePicture,
         });
+        await user.save();
+      }
+    } else {
+      // User found by googleId - update profile picture if needed
+      if (profile.profilePicture && (!user.profilePicture || (user.profilePicture !== profile.profilePicture))) {
+        user.profilePicture = profile.profilePicture;
         await user.save();
       }
     }
@@ -71,7 +86,7 @@ export class AuthService {
     const token = this.jwtService.sign({ id: user._id, email: user.email });
     
     // Redirect to appropriate route based on whether user is new or existing
-    const redirectUrl = isNewUser ? '/onboarding' : '/userdash';
+    const redirectUrl = isNewUser ? '/customize-profile' : '/userdash';
     
     return { token, redirectUrl };
   }
