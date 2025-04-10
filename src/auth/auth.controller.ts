@@ -24,11 +24,12 @@ export class AuthController {
   }
 
   @Get('google/callback')
-@UseGuards(AuthGuard('google'))
-async googleAuthRedirect(@Req() req, @Res() res) {
-  const { token, redirectUrl } = await this.authService.validateGoogleUser(req.user);
-  res.cookie('token', token, { httpOnly: true, secure: true });
-  return res.redirect(`http://localhost:3000${redirectUrl}`);
-}
+  @UseGuards(AuthGuard('google'))
+  async googleAuthRedirect(@Req() req, @Res() res) {
+    const { token } = await this.authService.validateGoogleUser(req.user);
+    res.cookie('token', token, { httpOnly: true, secure: true });
+    // Always redirect to customize-profile for a consistent user flow
+    return res.redirect(`http://localhost:3000/customize-profile`);
+  }
 
 }
