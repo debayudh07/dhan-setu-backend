@@ -1,34 +1,39 @@
-import { PassportStrategy } from '@nestjs/passport';
-import { Injectable } from '@nestjs/common';
-import { Strategy, VerifyCallback } from 'passport-google-oauth20';
-import * as dotenv from 'dotenv';
-import { AuthService } from '../../auth.service';
+import { PassportStrategy } from '@nestjs/passport'; 
+import { Injectable } from '@nestjs/common'; 
+import { Strategy } from 'passport-google-oauth20'; 
+import { ConfigService } from '@nestjs/config';
+import { AuthService } from '../../auth.service';  
 
-dotenv.config(); // Load environment variables
+@Injectable() 
+export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {   
+  constructor(
+    private authService: AuthService,
+    private configService: ConfigService
+  ) {     
+    super({       
+      clientID: configService.get<string>('GOOGLE_CLIENT_ID'),       
+      clientSecret: configService.get<string>('GOOGLE_CLIENT_SECRET'),       
+      callbackURL: configService.get<string>('GOOGLE_CALLBACK_URL'),       
+      scope: ['email', 'profile'],     
+    });   
+  }    
 
-@Injectable()
-export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
-  constructor(private authService: AuthService) {
-    super({
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL,
-      scope: ['email', 'profile'],
-    });
-  }
-
-  async validate(accessToken: string, refreshToken: string, profile: any) {
-    const { id: googleId, emails, displayName, photos } = profile;
-    const email = emails[0].value;
-    const profilePhotoUrl = photos && photos.length > 0 ? photos[0].value : null;
+  async validate(accessToken: string, refreshToken: string, profile: any) {     
+    const { id: googleId, emails, displayName, photos } = profile;     
+    const email = emails[0].value;     
+    const profilePhotoUrl = photos && photos.length > 0 ? photos[0].value : null;          
     
-    const userData = {
-      googleId,
-      email,
-      name: displayName,
+    const userData = {       
+      googleId,       
+      email,       
+      name: displayName,       
       profilePicture: profilePhotoUrl,
+      accessToken,
+      refreshToken
     };
     
-    return this.authService.validateGoogleUser(userData);
-  }
+    // Return the user data directly without validation
+    // Let the controller handle the validation and transformation
+    return userData;  
+  } 
 }
