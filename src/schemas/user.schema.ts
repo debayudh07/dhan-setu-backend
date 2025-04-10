@@ -19,8 +19,16 @@ export class User {
   @Prop({ required: false, unique: true })
   username: string;
 
-  @Prop({ required: true })
+  @Prop({ 
+    required: function() {
+      // Password is required only if the user doesn't have googleId
+      return !this.googleId;
+    } 
+  })
   password: string;
+
+  @Prop({ required: false, default: 'local', enum: ['local', 'google'] })
+  provider: string;
 
   @Prop({ required: false })
   profilePicture?: string;
@@ -32,7 +40,7 @@ export class User {
     required: false,
     validate: {
       validator: function(v) {
-        return /^\+\d{1,4}\d{10}$/.test(v);
+        return v ? /^\+\d{1,4}\d{10}$/.test(v) : true;
       },
       message: props => `${props.value} is not a valid phone number!`
     }
