@@ -38,12 +38,12 @@ export class User {
 
   @Prop({
     required: false,
-    validate: {
-      validator: function(v) {
-        return v ? /^\+\d{1,4}\d{10}$/.test(v) : true;
-      },
-      message: props => `${props.value} is not a valid phone number!`
-    }
+    // validate: {
+    //   validator: function(v) {
+    //     return v ? /^\+\d{1,4}\d{10}$/.test(v) : true;
+    //   },
+    //   message: props => `${props.value} is not a valid phone number!`
+    // }
   })
   phoneNumber: string;
 

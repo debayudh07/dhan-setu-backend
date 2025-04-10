@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, NotFoundException, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../schemas/user.schema';
@@ -9,6 +9,7 @@ import { UpdateProfileDto } from './dto/profile.dto';
 
 @Injectable()
 export class ProfileService {
+  private readonly logger = new Logger(ProfileService.name);
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Otp.name) private otpModel: Model<OtpDocument>,
@@ -116,56 +117,67 @@ export class ProfileService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
+  
     // Update the phone number in user model
     user.phoneNumber = phoneNumber;
     user.phoneVerified = false;
     await user.save();
-
-    // Generate OTP
-    const otp = this.smsService.generateOtp();
-
-    // Save OTP in database
-    await this.otpModel.findOneAndUpdate(
-      { phoneNumber },
-      { phoneNumber, otp },
-      { upsert: true, new: true },
-    );
-
-    // Send OTP via Fast2SMS
-    await this.smsService.sendOtp(phoneNumber, otp);
-
-    return { message: 'Verification code sent to your phone number' };
+  
+    // Send verification code via Twilio Verify API
+    // No need to generate or store OTP, as Twilio handles this
+    try {
+      const result = await this.smsService.sendOtp(phoneNumber);
+      
+      // We can store the verification SID if needed for reference
+      await this.otpModel.findOneAndUpdate(
+        { phoneNumber },
+        { phoneNumber, verificationSid: result.sid },
+        { upsert: true, new: true },
+      );
+  
+      return { message: 'Verification code sent to your phone number' };
+    } catch (error) {
+      this.logger.error(`Failed to send verification: ${error.message}`);
+      throw new HttpException(
+        error.message || 'Failed to send verification code',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
-
+  
   async verifyPhoneNumber(userId: string, otp: string): Promise<User> {
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
-    // Find OTP in database
-    const otpRecord = await this.otpModel.findOne({
-      phoneNumber: user.phoneNumber,
-    });
-
-    if (!otpRecord) {
-      throw new HttpException('OTP expired or not found', HttpStatus.BAD_REQUEST);
+  
+    // No need to retrieve OTP from database as we're using Twilio Verify
+    try {
+      // Verify OTP directly with Twilio
+      const verificationResult = await this.smsService.verifyOtp(user.phoneNumber, otp);
+      
+      if (verificationResult.success) {
+        // Mark phone as verified
+        user.phoneVerified = true;
+        await user.save();
+        
+        // Clean up the verification record
+        await this.otpModel.deleteOne({ phoneNumber: user.phoneNumber });
+        
+        return user;
+      } else {
+        throw new HttpException('Verification failed', HttpStatus.BAD_REQUEST);
+      }
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      
+      throw new HttpException(
+        error.message || 'Verification failed',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
-
-    // Verify OTP
-    if (otpRecord.otp !== otp) {
-      throw new HttpException('Invalid OTP', HttpStatus.BAD_REQUEST);
-    }
-
-    // Mark phone as verified
-    user.phoneVerified = true;
-    await user.save();
-
-    // Delete OTP record
-    await this.otpModel.deleteOne({ _id: otpRecord._id });
-
-    return user;
   }
 
   async deleteProfile(userId: string): Promise<void> {

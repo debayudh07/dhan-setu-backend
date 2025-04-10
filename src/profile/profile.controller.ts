@@ -104,7 +104,7 @@ export class ProfileController {
       requestPhoneVerificationDto.phoneNumber
     );
   }
-
+  
   @Post('verify-phone')
   @UseGuards(JwtAuthGuard)
   @HttpCode(200)
