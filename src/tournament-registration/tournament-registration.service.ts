@@ -101,30 +101,36 @@ export class TournamentRegistrationService {
   async getTournamentParticipants(tournamentId: string): Promise<any[]> {
     // Find all registrations for the tournament
     const registrations = await this.registrationModel.find({
-      tournamentId
-    }).exec();
+      tournamentId: tournamentId.toString()  // Ensure string comparison
+    }).lean().exec();  // Use lean() for better performance with large datasets
     
     if (registrations.length === 0) {
       return [];
     }
     
-    // Get all user IDs from registrations
-    const userIds = registrations.map(reg => reg.userId);
+    // Extract user IDs as strings
+    const userIds = registrations.map(reg => 
+      reg.userId instanceof MongooseTypes.ObjectId 
+        ? reg.userId 
+        : new MongooseTypes.ObjectId(reg.userId.toString())
+    );
     
     // Find all users and include their registration status
     const users = await this.userModel.find({
       _id: { $in: userIds }
-    }).select('-password').exec() as UserDocument[];
+    }).select('-password').lean().exec();  // lean() returns plain JSON objects
     
     // Combine user data with registration status
     return users.map(user => {
+      const userId = user._id.toString();
       const registration = registrations.find(reg => 
-        reg.userId.toString() === (user._id as MongooseTypes.ObjectId).toString()
+        reg.userId.toString() === userId
       );
       
+      // Return a plain object that can be serialized to JSON
       return {
-        ...user.toObject(),
-        registrationStatus: registration?.status,
+        ...user,
+        registrationStatus: registration?.status || 'unknown',
         hasPaid: registration?.hasPaid || false
       };
     });
