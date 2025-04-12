@@ -12,7 +12,7 @@ export class TournamentRegistration {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Tournament', required: true })
   tournamentId: MongooseSchema.Types.ObjectId;
 
-  @Prop({ default: 'pending' })
+  @Prop({ default: 'approved' })
   status: string;  // 'pending', 'approved', 'rejected'
 
   @Prop({ default: false })
