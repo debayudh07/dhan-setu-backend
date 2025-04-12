@@ -99,19 +99,37 @@ export class TournamentRegistrationService {
   }
 
   async getTournamentParticipants(tournamentId: string): Promise<any[]> {
-    // Find all registrations for the tournament
-    const registrations = await this.registrationModel.find({ 
-      tournamentId,
-      status: 'approved' 
-    }).exec();
+    // Log the tournamentId to verify it's correct
+    console.log('Looking up tournament:', tournamentId);
     
-    // Get the user ids from the registrations
-    const userIds = registrations.map(reg => reg.userId);
+    // Check if registrations exist at all
+    const allRegistrations = await this.registrationModel.find({
+      tournamentId
+    }).exec();
+    console.log('All registrations count:', allRegistrations.length);
+    
+    // Find approved registrations
+    const approvedRegistrations = await this.registrationModel.find({
+      tournamentId,
+      status: 'approved'
+    }).exec();
+    console.log('Approved registrations count:', approvedRegistrations.length);
+    
+    // If no approved registrations, the problem is either with tournamentId or status
+    if (approvedRegistrations.length === 0) {
+      return [];
+    }
+    
+    // Get the user ids and log them
+    const userIds = approvedRegistrations.map(reg => reg.userId);
+    console.log('User IDs found:', userIds);
     
     // Find all users using the user ids
     const users = await this.userModel.find({
       _id: { $in: userIds }
-    }).select('-password').exec();  // Exclude password
+    }).select('-password').exec();
+    
+    console.log('Users found:', users.length);
     
     return users;
   }
