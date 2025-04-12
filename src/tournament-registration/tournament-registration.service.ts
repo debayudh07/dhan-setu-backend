@@ -99,39 +99,35 @@ export class TournamentRegistrationService {
   }
 
   async getTournamentParticipants(tournamentId: string): Promise<any[]> {
-    // Log the tournamentId to verify it's correct
-    console.log('Looking up tournament:', tournamentId);
-    
-    // Check if registrations exist at all
-    const allRegistrations = await this.registrationModel.find({
+    // Find all registrations for the tournament
+    const registrations = await this.registrationModel.find({
       tournamentId
     }).exec();
-    console.log('All registrations count:', allRegistrations.length);
     
-    // Find approved registrations
-    const approvedRegistrations = await this.registrationModel.find({
-      tournamentId,
-      status: 'approved'
-    }).exec();
-    console.log('Approved registrations count:', approvedRegistrations.length);
-    
-    // If no approved registrations, the problem is either with tournamentId or status
-    if (approvedRegistrations.length === 0) {
+    if (registrations.length === 0) {
       return [];
     }
     
-    // Get the user ids and log them
-    const userIds = approvedRegistrations.map(reg => reg.userId);
-    console.log('User IDs found:', userIds);
+    // Get all user IDs from registrations
+    const userIds = registrations.map(reg => reg.userId);
     
-    // Find all users using the user ids
+    // Find all users and include their registration status
     const users = await this.userModel.find({
       _id: { $in: userIds }
-    }).select('-password').exec();
+    }).select('-password').exec() as UserDocument[];
     
-    console.log('Users found:', users.length);
-    
-    return users;
+    // Combine user data with registration status
+    return users.map(user => {
+      const registration = registrations.find(reg => 
+        reg.userId.toString() === (user._id as MongooseTypes.ObjectId).toString()
+      );
+      
+      return {
+        ...user.toObject(),
+        registrationStatus: registration?.status,
+        hasPaid: registration?.hasPaid || false
+      };
+    });
   }
 
   async updateRegistrationStatus(
